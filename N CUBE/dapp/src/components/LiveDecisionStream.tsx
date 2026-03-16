@@ -40,7 +40,7 @@ export default function LiveDecisionStream({ onDecisionSubmitted }: LiveDecision
         "Cerebrum AI",
         lastMsg.confidence,
         allReasoning,
-        "HR: 110bpm",
+        { bpm: 110, trace: "detected abnormality" },
         "Alert Patient"
       );
       setSubmitted(true);
@@ -85,7 +85,7 @@ export default function LiveDecisionStream({ onDecisionSubmitted }: LiveDecision
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="bg-[#0b1121] border border-[#2d1b69] rounded-xl shadow-lg shadow-purple-900/20 h-[500px] flex flex-col overflow-hidden relative">
+    <div className="h-[460px] flex flex-col overflow-hidden relative rounded-xl">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#080d1a] pointer-events-none z-0"></div>
       <div className="px-5 py-4 bg-[#050811]/90 backdrop-blur-md border-b border-[#2d1b69] flex items-center justify-between z-10">
         <div className="flex items-center gap-2 text-[#a882ff] font-mono text-sm uppercase tracking-widest font-bold">

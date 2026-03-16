@@ -4,7 +4,7 @@ import React from 'react';
 import { Shield, BrainCircuit, Activity, CheckCircle, ExternalLink, Hash } from 'lucide-react';
 
 interface DecisionDigestProps {
-  inputData?: string;
+  inputData?: any;
   reasoning?: string;
   confidence?: number;
   decisionHash?: string;
@@ -21,7 +21,7 @@ export default function DecisionDigestCard({
   const needsReview = confidence < 90;
 
   return (
-    <div className="bg-[#0b1121] border border-[#2d1b69] rounded-xl shadow-[0_0_15px_rgba(168,130,255,0.1)] overflow-hidden h-[500px] flex flex-col">
+    <div className="flex flex-col h-[460px] rounded-xl overflow-hidden relative">
       <div className="px-5 py-4 bg-[#050811]/90 backdrop-blur-md border-b border-[#2d1b69] flex items-center gap-3">
         <Shield className="text-[#a882ff]" size={22} strokeWidth={2.5} />
         <h2 className="text-sm font-semibold text-white tracking-widest uppercase font-mono">Decision Digest</h2>
@@ -35,7 +35,7 @@ export default function DecisionDigestCard({
             <Activity size={14} className="text-[#a882ff]" /> Input Data
           </div>
           <div className="bg-[#141b30] border border-[#232a45] rounded-lg p-3.5 text-blue-200 font-medium text-sm shadow-[inset_0_1px_4px_rgba(0,0,0,0.5)]">
-            {inputData}
+            {typeof inputData === 'object' ? JSON.stringify(inputData) : inputData}
           </div>
         </div>
 

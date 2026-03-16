@@ -1,41 +1,32 @@
 /**
- * API Client — centralised fetch wrapper for the PDP backend.
+ * API Client — centralized fetch wrapper for the CUBE Demo backend.
  *
- * Base URL defaults to the local FastAPI dev server.
+ * All requests are routed to the unified CUBE backend on port 8010.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export interface DecisionRecord {
   id: string;
-  timestamp: string;
-  agent: string;
-  confidence: number;
-  reasoning: string;
-  input_data: string;
+  timestamp: number;
   decision_type: string;
+  input_data: any;
+  reasoning: string;
+  confidence: number;
   decision_hash: string;
-  tx_hash: string | null;
-  block_height: number | null;
-  status: "Pending" | "Confirmed" | "Rejected";
-  human_signature: string | null;
-  reviewer_notes: string | null;
+  status: string;
+  on_chain: {
+    tx_hash: string;
+    block_height: number;
+    status: string;
+  } | null;
 }
 
 export interface DecisionSubmitResponse {
   decision: DecisionRecord;
-  on_chain: boolean;
-  message: string;
-}
-
-export interface ReviewResponse {
-  decision_id: string;
-  action: string;
-  on_chain: boolean;
-  tx_hash: string | null;
-  message: string;
+  on_chain: any;
 }
 
 export interface HealthResponse {
@@ -63,48 +54,62 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 // ── Endpoints ──────────────────────────────────────────────────────────────────
 
 export async function checkHealth(): Promise<HealthResponse> {
-  return apiFetch<HealthResponse>("/api/health");
+  return apiFetch<HealthResponse>("/api/cube/legacy/health");
 }
 
 export async function submitDecision(data: {
-  agent: string;
+  decision_type: string;
   confidence: number;
   reasoning: string;
-  input_data: string;
-  decision_type?: string;
+  input_data: any;
 }): Promise<DecisionSubmitResponse> {
-  return apiFetch<DecisionSubmitResponse>("/api/decisions/submit", {
+  return apiFetch<DecisionSubmitResponse>("/api/cube/submit", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
+export async function getDecisions(): Promise<DecisionRecord[]> {
+  return apiFetch<DecisionRecord[]>("/api/cube/decisions");
+}
+
 export async function getDecisionHistory(): Promise<DecisionRecord[]> {
-  return apiFetch<DecisionRecord[]>("/api/decisions/history");
+    return getDecisions();
 }
 
-export async function verifyDecision(
-  hash: string
-): Promise<{ found: boolean; decision?: DecisionRecord; on_chain?: boolean }> {
-  return apiFetch("/api/decisions/verify/" + encodeURIComponent(hash));
+export async function approveDecision(decisionId: string): Promise<any> {
+  return { status: "success", info: "Demo mode" };
 }
 
-export async function approveDecision(
-  decisionId: string,
-  reviewerNotes?: string
-): Promise<ReviewResponse> {
-  return apiFetch<ReviewResponse>("/api/review/approve", {
-    method: "POST",
-    body: JSON.stringify({ decision_id: decisionId, reviewer_notes: reviewerNotes }),
-  });
+export async function rejectDecision(decisionId: string, reason: string): Promise<any> {
+  return { status: "success", info: "Demo mode" };
 }
 
-export async function rejectDecision(
-  decisionId: string,
-  reason: string
-): Promise<ReviewResponse> {
-  return apiFetch<ReviewResponse>("/api/review/reject", {
-    method: "POST",
-    body: JSON.stringify({ decision_id: decisionId, reason }),
-  });
+// ── CUBE Specific Endpoints ──────────────────────────────────────────────────
+
+export interface CubeMetrics {
+  trustScore: number;
+  uptime: number;
+  tps: number;
+  activeNodes: number;
+  confirmedDecisions: number;
+  pendingDecisions: number;
+  failedDecisions: number;
+  walletAddress: string | null;
+}
+
+export interface NetworkStats {
+  blocks: number;
+  nodes: number;
+  shards: number;
+  tps_avg: number;
+  sentinel: string;
+}
+
+export async function getCubeMetrics(): Promise<CubeMetrics> {
+  return apiFetch<CubeMetrics>("/api/cube/metrics");
+}
+
+export async function getNetworkStats(): Promise<NetworkStats> {
+  return apiFetch<NetworkStats>("/api/cube/network");
 }

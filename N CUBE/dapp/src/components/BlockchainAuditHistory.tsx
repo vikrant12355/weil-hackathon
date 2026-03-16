@@ -28,7 +28,7 @@ export default function BlockchainAuditHistory() {
   }, [fetchHistory]);
 
   return (
-    <div className="bg-[#0b1121] border border-[#2d1b69] rounded-xl shadow-[0_0_15px_rgba(168,130,255,0.05)] overflow-hidden">
+    <div className="rounded-xl overflow-hidden relative">
       <div className="px-5 py-4 bg-[#050811]/90 backdrop-blur-md border-b border-[#2d1b69] flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Database className="text-[#a882ff]" size={20} strokeWidth={2.5} />
@@ -72,10 +72,12 @@ export default function BlockchainAuditHistory() {
                   {record.decision_type}
                 </td>
                 <td className="px-5 py-4 text-gray-400 text-xs truncate max-w-[150px]">
-                  {record.input_data}
+                  {typeof record.input_data === 'object' 
+                    ? JSON.stringify(record.input_data) 
+                    : record.input_data}
                 </td>
                 <td className="px-5 py-4 font-mono text-[#a882ff] text-[11px] font-bold">
-                  {record.block_height ? `#${record.block_height}` : '-'}
+                  {record.on_chain?.block_height ? `#${record.on_chain.block_height}` : '-'}
                 </td>
                 <td className="px-5 py-4 font-mono text-gray-400 text-[11px] flex flex-col justify-center gap-1">
                   <div className="flex items-center gap-1.5">
@@ -84,13 +86,13 @@ export default function BlockchainAuditHistory() {
                   </div>
                 </td>
                 <td className="px-5 py-4">
-                  {record.status === 'Confirmed' && (
+                  {record.status === 'confirmed' && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[9px] font-black uppercase tracking-widest bg-green-500/10 text-green-400 border border-green-500/30">
                       <ShieldCheck size={12} className="text-green-400" />
-                      {record.tx_hash ? 'Verified on WeilChain' : 'Verified on PDP Chain'}
+                      {record.on_chain?.tx_hash ? 'Verified on WeilChain' : 'Verified on PDP Chain'}
                     </span>
                   )}
-                  {record.status === 'Pending' && (
+                  {record.status === 'pending' && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[9px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-400 border border-amber-500/30">
                       <AlertCircle size={10} className="text-amber-400 animate-pulse" />
                       Awaiting Review

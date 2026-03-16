@@ -1,8 +1,184 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  padding: 0;
+@layer base {
+  :root {
+    --ink: #060B18;
+    --card: rgba(13, 18, 35, .92);
+    --card2: rgba(18, 25, 48, .95);
+    --glass: rgba(255, 255, 255, .04);
+    --glass2: rgba(255, 255, 255, .07);
+    --e1: rgba(139, 92, 246, .15);
+    --e2: rgba(139, 92, 246, .30);
+    --vio: #8B5CF6;
+    --vio2: #A78BFA;
+    --vio3: #C4B5FD;
+    --neon: #22D3EE;
+    --go: #10B981;
+    --warn: #F59E0B;
+    --danger: #EF4444;
+    --t1: #F8FAFF;
+    --t2: #B4BCD0;
+    --t3: #64748B;
+    --t4: #4B5563;
+    --ff-d: 'Syne', sans-serif;
+    --ff-b: 'DM Sans', sans-serif;
+    --ff-m: 'JetBrains Mono', monospace;
+    --glow-v: 0 0 20px rgba(139, 92, 246, .45);
+  }
+
+  body.light {
+    --ink: #EEF2FF;
+    --card: rgba(255, 255, 255, .97);
+    --card2: rgba(248, 250, 255, .99);
+    --glass: rgba(139, 92, 246, .06);
+    --glass2: rgba(139, 92, 246, .10);
+    --e1: rgba(139, 92, 246, .2);
+    --e2: rgba(139, 92, 246, .4);
+    --t1: #0F172A;
+    --t2: #1E293B;
+    --t3: #475569;
+    --t4: #94A3B8;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--ink);
+    color: var(--t1);
+    font-family: var(--ff-b);
+    font-size: 14px;
+    overflow: hidden;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  button {
+    font-family: var(--ff-b);
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: inherit;
+    outline: none;
+  }
+}
+
+@layer utilities {
+  .gc {
+    background: var(--card);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--e1);
+    border-radius: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .gc::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, .04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  
+  body.light .gc {
+    background: rgba(255,255,255,.95);
+    border-color: rgba(139,92,246,.15);
+    box-shadow: 0 2px 16px rgba(139,92,246,.07);
+  }
+  body.light .gc::before {
+    background: linear-gradient(135deg, rgba(139,92,246,.04) 0%, transparent 50%);
+  }
+
+  .scrollbar-custom::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+  .scrollbar-custom::-webkit-scrollbar-thumb {
+    background: rgba(139, 92, 246, .3);
+    border-radius: 2px;
+  }
+  .scrollbar-custom::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  body.light .scrollbar-custom::-webkit-scrollbar-thumb {
+    background: rgba(139,92,246,.2);
+  }
+}
+
+/* Animations from reference */
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .3; }
+}
+
+@keyframes gridPan {
+  0% { background-position: 0 0; }
+  100% { background-position: 60px 60px; }
+}
+
+@keyframes orb {
+  0%, 100% { opacity: .4; transform: scale(1); }
+  50% { opacity: .85; transform: scale(1.05); }
+}
+
+@keyframes newRow {
+  0% { background: rgba(139, 92, 246, .18); }
+  100% { background: transparent; }
+}
+
+/* Background elements */
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  background-image: linear-gradient(rgba(139, 92, 246, .04) 1px, transparent 1px), linear-gradient(90deg, rgba(139, 92, 246, .04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  animation: gridPan 8s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+body.light .bg-grid {
+  background-image: linear-gradient(rgba(139, 92, 246, .05) 1px, transparent 1px), linear-gradient(90deg, rgba(139, 92, 246, .05) 1px, transparent 1px);
+}
+
+.bg-orb1 {
+  position: fixed;
+  width: 500px;
+  height: 500px;
+  left: -150px;
+  top: -150px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139, 92, 246, .12), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  animation: orb 5s ease-in-out infinite;
+  filter: blur(80px);
+}
+body.light .bg-orb1 {
+  background: radial-gradient(circle, rgba(139, 92, 246, .08), transparent 70%);
+}
+
+.bg-orb2 {
+  position: fixed;
+  width: 400px;
+  height: 400px;
+  right: -100px;
+  bottom: -100px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(34, 211, 238, .09), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  animation: orb 5s ease-in-out infinite 2.5s;
+  filter: blur(80px);
+}
+body.light .bg-orb2 {
+  background: radial-gradient(circle, rgba(34, 211, 238, .06), transparent 70%);
 }
