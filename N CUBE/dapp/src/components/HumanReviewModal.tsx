@@ -2,27 +2,83 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, Fingerprint, XCircle } from 'lucide-react';
+import { AlertTriangle, Fingerprint, XCircle, CheckCircle } from 'lucide-react';
+import { approveBlock, rejectBlock } from '@/utils/blockchain';
 
-export default function HumanReviewModal() {
-  const [isOpen, setIsOpen] = useState(true);
+interface HumanReviewModalProps {
+  isOpen: boolean;
+  decisionId: string | null;
+  decisionSummary?: string;
+  reasoningTrace?: string;
+  confidence?: number;
+  onClose: () => void;
+  onReviewComplete?: (action: "approved" | "rejected") => void;
+}
+
+export default function HumanReviewModal({
+  isOpen,
+  decisionId,
+  decisionSummary = "Alert Patient - High Risk",
+  reasoningTrace = "Heart rate exceeds threshold and patient risk profile indicates anomaly.",
+  confidence = 87,
+  onClose,
+  onReviewComplete,
+}: HumanReviewModalProps) {
   const [isSigning, setIsSigning] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
+  const [completionAction, setCompletionAction] = useState<string>("");
   const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
+    if (!decisionId) return;
     setIsSigning(true);
-    setTimeout(() => {
+    setError(null);
+    try {
+      const result = await approveBlock(decisionId);
+      setCompletionAction(result.on_chain ? "Approved & Recorded on WeilChain" : "Approved (Demo Mode)");
+      setIsComplete(true);
+      onReviewComplete?.("approved");
+      setTimeout(() => {
+        onClose();
+        resetState();
+      }, 2000);
+    } catch (err) {
+      setError(`Approval failed: ${err}`);
+    } finally {
       setIsSigning(false);
-      setIsOpen(false);
-    }, 2000);
+    }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
+    if (!decisionId) return;
     if (!reason) {
-       alert("Please provide an override explanation.");
-       return;
+      setError("Please provide an override explanation.");
+      return;
     }
-    setIsOpen(false);
+    setIsSigning(true);
+    setError(null);
+    try {
+      const result = await rejectBlock(decisionId, reason);
+      setCompletionAction(result.on_chain ? "Rejected & Recorded on WeilChain" : "Rejected (Demo Mode)");
+      setIsComplete(true);
+      onReviewComplete?.("rejected");
+      setTimeout(() => {
+        onClose();
+        resetState();
+      }, 2000);
+    } catch (err) {
+      setError(`Rejection failed: ${err}`);
+    } finally {
+      setIsSigning(false);
+    }
+  };
+
+  const resetState = () => {
+    setIsComplete(false);
+    setCompletionAction("");
+    setReason("");
+    setError(null);
   };
 
   return (
@@ -41,31 +97,45 @@ export default function HumanReviewModal() {
               <h2 className="text-xl font-black tracking-tight text-white uppercase font-mono">Human Review Required</h2>
             </div>
             
+            {/* Completion Banner */}
+            {isComplete && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                className="bg-green-500/10 border-b border-green-500/30 px-6 py-3 flex items-center gap-2"
+              >
+                <CheckCircle className="text-green-400" size={18} />
+                <span className="text-green-300 text-sm font-bold font-mono uppercase tracking-wider">{completionAction}</span>
+              </motion.div>
+            )}
+
             {/* Body */}
             <div className="p-6 space-y-7">
               
               <div className="space-y-1.5 border-b border-[#232a45] pb-4">
                 <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest font-mono">Decision Summary</span>
-                <p className="font-bold text-lg text-[#a882ff] bg-[#141b30] px-4 py-2.5 rounded-lg border border-[#232a45] shadow-inner">Alert Patient - High Risk</p>
+                <p className="font-bold text-lg text-[#a882ff] bg-[#141b30] px-4 py-2.5 rounded-lg border border-[#232a45] shadow-inner">{decisionSummary}</p>
               </div>
 
               <div className="space-y-1.5 border-b border-[#232a45] pb-4 relative">
                 <div className="absolute top-8 left-0 w-1 h-3/4 bg-amber-500/50 rounded-r"></div>
                 <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest font-mono pl-3">Reasoning Trace</span>
                 <p className="text-amber-200/90 italic bg-amber-500/5 border border-amber-500/20 rounded-lg p-4 text-[13px] leading-relaxed font-mono font-medium shadow-inner ml-3">
-                   &quot;Heart rate exceeds threshold and patient risk profile indicates anomaly.&quot;
+                   &quot;{reasoningTrace}&quot;
                 </p>
               </div>
 
               <div className="space-y-1.5 border-b border-[#232a45] pb-4 pl-3">
                 <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest font-mono flex items-center gap-2">
                   Confidence Score
-                  <span className="bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest">
-                    Beneath 90%
-                  </span>
+                  {confidence < 90 && (
+                    <span className="bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest">
+                      Beneath 90%
+                    </span>
+                  )}
                 </span>
                 <div className="flex items-end gap-1 mt-1">
-                  <span className="text-4xl font-black text-amber-500 tracking-tighter drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]">87</span>
+                  <span className="text-4xl font-black text-amber-500 tracking-tighter drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]">{confidence}</span>
                   <span className="text-xl font-bold text-amber-500/70 mb-1">%</span>
                 </div>
               </div>
@@ -82,6 +152,12 @@ export default function HumanReviewModal() {
                   placeholder="Explain why human override is needed if rejecting..."
                 />
               </div>
+
+              {error && (
+                <div className="text-red-400 text-xs bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 font-mono">
+                  {error}
+                </div>
+              )}
             </div>
 
             {/* Footer */}
@@ -90,21 +166,21 @@ export default function HumanReviewModal() {
               <button 
                 onClick={handleReject}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-[#232a45] bg-[#141b30] text-gray-300 font-bold hover:bg-[#232a45] hover:text-white transition-colors text-sm uppercase tracking-wider font-mono shadow-md z-10"
-                disabled={isSigning}
+                disabled={isSigning || isComplete}
               >
                 <XCircle size={16} /> Reject / Override
               </button>
               <button 
                 onClick={handleApprove}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-lg border border-transparent bg-indigo-600 hover:bg-[#a882ff] text-white font-bold transition-all text-sm uppercase tracking-wider font-mono shadow-[0_0_15px_rgba(79,70,229,0.5)] z-10 overflow-hidden relative group"
-                disabled={isSigning}
+                disabled={isSigning || isComplete}
               >
                 {isSigning && <div className="absolute inset-0 bg-black/20"></div>}
                 
                 {isSigning ? (
                   <span className="flex items-center gap-2 relative z-10">
                     <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"></motion.div>
-                    Simulating...
+                    Signing on WeilChain...
                   </span>
                 ) : (
                   <span className="flex items-center gap-2 relative z-10">

@@ -1,47 +1,32 @@
-import React from 'react';
-import { Database, Clock, XCircle, AlertCircle, Hash, ShieldCheck } from 'lucide-react';
+"use client";
 
-interface AuditRecord {
-  id: string;
-  timestamp: string;
-  decisionType: string;
-  inputSummary: string;
-  hash: string;
-  blockNumber: string;
-  status: 'Pending' | 'Confirmed' | 'Rejected';
-}
-
-const mockHistory: AuditRecord[] = [
-  {
-    id: '1',
-    timestamp: '10:45:02 UTC',
-    decisionType: 'Alert Patient',
-    inputSummary: 'HR > 110bpm',
-    hash: 'WAITING...',
-    blockNumber: '-',
-    status: 'Pending'
-  },
-  {
-    id: '2',
-    timestamp: '10:38:15 UTC',
-    decisionType: 'Normal Diagnosis',
-    inputSummary: 'HR: 75bpm, BP: 120/80',
-    hash: '0x3fb892...c74a',
-    blockNumber: '#149201',
-    status: 'Confirmed'
-  },
-  {
-    id: '3',
-    timestamp: '10:22:41 UTC',
-    decisionType: 'Administer Meds',
-    inputSummary: 'Temp: 102F',
-    hash: '0xa74c01...d8e1',
-    blockNumber: '#149200',
-    status: 'Rejected'
-  }
-];
+import React, { useState, useEffect, useCallback } from 'react';
+import { Database, Clock, XCircle, AlertCircle, Hash, ShieldCheck, RefreshCw } from 'lucide-react';
+import { getBlockchainHistory, type DecisionRecord } from '@/utils/blockchain';
 
 export default function BlockchainAuditHistory() {
+  const [history, setHistory] = useState<DecisionRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchHistory = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getBlockchainHistory();
+      setHistory(data);
+    } catch (err) {
+      console.error("Failed to fetch history:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchHistory();
+    // Poll every 5 seconds
+    const interval = setInterval(fetchHistory, 5000);
+    return () => clearInterval(interval);
+  }, [fetchHistory]);
+
   return (
     <div className="bg-[#0b1121] border border-[#2d1b69] rounded-xl shadow-[0_0_15px_rgba(168,130,255,0.05)] overflow-hidden">
       <div className="px-5 py-4 bg-[#050811]/90 backdrop-blur-md border-b border-[#2d1b69] flex items-center justify-between">
@@ -49,6 +34,13 @@ export default function BlockchainAuditHistory() {
           <Database className="text-[#a882ff]" size={20} strokeWidth={2.5} />
           <h2 className="text-sm font-semibold text-white tracking-widest uppercase font-mono">Blockchain Verification History</h2>
         </div>
+        <button
+          onClick={fetchHistory}
+          className="p-1.5 rounded-lg border border-[#232a45] text-gray-400 hover:text-[#a882ff] hover:border-[#a882ff]/50 transition-colors"
+          title="Refresh"
+        >
+          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+        </button>
       </div>
       <div className="overflow-x-auto custom-scrollbar">
         <table className="w-full text-left text-sm whitespace-nowrap">
@@ -63,38 +55,45 @@ export default function BlockchainAuditHistory() {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#232a45] bg-[#0b1121]">
-            {mockHistory.map((record) => (
+            {history.length === 0 && !loading && (
+              <tr>
+                <td colSpan={6} className="px-5 py-8 text-center text-gray-600 italic">
+                  No decisions recorded yet. Submit a decision to see it here.
+                </td>
+              </tr>
+            )}
+            {history.map((record) => (
               <tr key={record.id} className="hover:bg-[#141b30] transition-colors border-l-2 border-transparent hover:border-[#a882ff]/50">
                 <td className="px-5 py-4 text-gray-400 flex items-center gap-2 font-mono text-[11px]">
                   <Clock size={12} className="text-[#a882ff]" />
-                  {record.timestamp}
+                  {new Date(record.timestamp).toLocaleTimeString()}
                 </td>
                 <td className="px-5 py-4 font-bold text-gray-200">
-                  {record.decisionType}
+                  {record.decision_type}
                 </td>
                 <td className="px-5 py-4 text-gray-400 text-xs truncate max-w-[150px]">
-                  {record.inputSummary}
+                  {record.input_data}
                 </td>
                 <td className="px-5 py-4 font-mono text-[#a882ff] text-[11px] font-bold">
-                  {record.blockNumber}
+                  {record.block_height ? `#${record.block_height}` : '-'}
                 </td>
                 <td className="px-5 py-4 font-mono text-gray-400 text-[11px] flex flex-col justify-center gap-1">
                   <div className="flex items-center gap-1.5">
                     <Hash size={10} className="text-[#a882ff]/50" />
-                    {record.hash}
+                    {record.decision_hash.slice(0, 14)}...{record.decision_hash.slice(-4)}
                   </div>
                 </td>
                 <td className="px-5 py-4">
                   {record.status === 'Confirmed' && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[9px] font-black uppercase tracking-widest bg-green-500/10 text-green-400 border border-green-500/30">
                       <ShieldCheck size={12} className="text-green-400" />
-                      Verified on PDP Chain
+                      {record.tx_hash ? 'Verified on WeilChain' : 'Verified on PDP Chain'}
                     </span>
                   )}
                   {record.status === 'Pending' && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[9px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-400 border border-amber-500/30">
                       <AlertCircle size={10} className="text-amber-400 animate-pulse" />
-                      MemPool Pending
+                      Awaiting Review
                     </span>
                   )}
                   {record.status === 'Rejected' && (

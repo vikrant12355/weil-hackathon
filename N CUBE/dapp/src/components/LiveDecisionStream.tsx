@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Terminal, Cpu } from 'lucide-react';
+import { Terminal, Cpu, CheckCircle2 } from 'lucide-react';
+import { storeDecisionBlock, type DecisionSubmitResponse } from '@/utils/blockchain';
 
 interface ReasoningEntry {
   id: string;
@@ -19,8 +20,43 @@ const simulatedMessages = [
   { text: "Risk classification: HIGH.", confidence: 87 }
 ];
 
-export default function LiveDecisionStream() {
+interface LiveDecisionStreamProps {
+  onDecisionSubmitted?: (result: DecisionSubmitResponse) => void;
+}
+
+export default function LiveDecisionStream({ onDecisionSubmitted }: LiveDecisionStreamProps) {
   const [entries, setEntries] = useState<ReasoningEntry[]>([]);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [txResult, setTxResult] = useState<string | null>(null);
+
+  const submitToChain = useCallback(async () => {
+    if (submitted || submitting) return;
+    setSubmitting(true);
+    try {
+      const lastMsg = simulatedMessages[simulatedMessages.length - 1];
+      const allReasoning = simulatedMessages.map(m => m.text).join(" → ");
+      const result = await storeDecisionBlock(
+        "Cerebrum AI",
+        lastMsg.confidence,
+        allReasoning,
+        "HR: 110bpm",
+        "Alert Patient"
+      );
+      setSubmitted(true);
+      setTxResult(
+        result.on_chain
+          ? `On-chain: ${result.decision.decision_hash.slice(0, 18)}...`
+          : `Local: ${result.decision.decision_hash.slice(0, 18)}...`
+      );
+      onDecisionSubmitted?.(result);
+    } catch (err) {
+      console.error("Failed to submit decision:", err);
+      setTxResult("Submission failed — backend offline?");
+    } finally {
+      setSubmitting(false);
+    }
+  }, [submitted, submitting, onDecisionSubmitted]);
 
   useEffect(() => {
     let index = 0;
@@ -40,11 +76,13 @@ export default function LiveDecisionStream() {
         index++;
       } else {
         clearInterval(interval);
+        // Auto-submit after stream completes
+        submitToChain();
       }
     }, 2800);
 
     return () => clearInterval(interval);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="bg-[#0b1121] border border-[#2d1b69] rounded-xl shadow-lg shadow-purple-900/20 h-[500px] flex flex-col overflow-hidden relative">
@@ -95,6 +133,30 @@ export default function LiveDecisionStream() {
               </div>
             </motion.div>
           ))}
+
+          {/* On-chain submission status */}
+          {(submitting || txResult) && (
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-5 border-l-2 border-green-500/50 pl-4 py-1"
+            >
+              <div className="flex items-start gap-3">
+                <CheckCircle2 size={16} className="mt-0.5 text-green-400 shrink-0" />
+                <div className="w-full">
+                  <span className="text-green-400 font-bold uppercase tracking-wide text-xs">
+                    {submitting ? "Submitting to WeilChain..." : "Decision Recorded"}
+                  </span>
+                  {txResult && (
+                    <div className="text-green-300/80 mt-1.5 leading-relaxed text-[12px] bg-green-500/5 p-3 rounded-lg border border-green-500/20 font-mono">
+                      {txResult}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {entries.length === 0 && (
             <div className="flex h-full items-center justify-center text-gray-600 italic">
                Awaiting reasoning stream...
